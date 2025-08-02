@@ -37,5 +37,3 @@ app.use(globalErrorHandler);
 app.use(notFound);
 
 export default app;
-
-// app -> router matching -> controller -> service -> model -> database
