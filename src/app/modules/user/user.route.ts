@@ -32,13 +32,13 @@ router.get(
   UserController.applyForAgent
 );
 router.post(
-  "/approve-agent/:userId",
+  "/manage-agent/:userId",
   validateRequest(manageAgentZodSchema),
   checkAuth(Role.SUPER_ADMIN, Role.ADMIN),
   UserController.approveAgent
 );
 router.patch(
-  "/:id",
+  "/update-profile",
   validateRequest(updateUserZodSchema),
   checkAuth(...Object.values(Role)),
   UserController.updateUser

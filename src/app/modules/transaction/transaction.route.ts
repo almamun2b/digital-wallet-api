@@ -9,7 +9,6 @@ import {
   depositZodSchema,
   refundZodSchema,
   transferZodSchema,
-  withdrawalZodSchema,
 } from "./transaction.validation";
 
 const router = Router();
@@ -23,10 +22,10 @@ router.post(
 );
 
 router.post(
-  "/withdrawal",
+  "/cash-out",
   checkAuth(Role.USER),
-  validateRequest(withdrawalZodSchema),
-  TransactionController.withdrawal
+  validateRequest(cashOutZodSchema),
+  TransactionController.cashOut
 );
 
 router.get(
@@ -41,13 +40,6 @@ router.post(
   checkAuth(Role.AGENT),
   validateRequest(cashInZodSchema),
   TransactionController.cashIn
-);
-
-router.post(
-  "/cash-out",
-  checkAuth(Role.USER),
-  validateRequest(cashOutZodSchema),
-  TransactionController.cashOut
 );
 
 // Admin routes

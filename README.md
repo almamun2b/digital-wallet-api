@@ -94,7 +94,6 @@ The Digital Wallet API is a robust financial management system that enables user
 
 ### Cloud Services
 
-- **Cloudinary**: Image upload and management
 - **Vercel**: Deployment platform
 
 ## API Endpoints
@@ -112,23 +111,28 @@ The Digital Wallet API is a robust financial management system that enables user
 
 ### User Management Routes (`/api/v1/user`)
 
-| Method | Endpoint           | Description                       | Access             |
-| ------ | ------------------ | --------------------------------- | ------------------ |
-| `POST` | `/register`        | Register new user account         | Public             |
-| `GET`  | `/all-users`       | Get all users (with pagination)   | Super Admin, Admin |
-| `GET`  | `/me`              | Get current user profile          | Authenticated      |
-| `GET`  | `/apply-for-agent` | Apply to become an agent          | User               |
-| `PUT`  | `/update-profile`  | Update user profile               | Authenticated      |
-| `POST` | `/manage-agent`    | Approve/reject agent applications | Super Admin, Admin |
+| Method | Endpoint                | Description                       | Access             |
+| ------ | ----------------------- | --------------------------------- | ------------------ |
+| `POST` | `/register`             | Register new user account         | Public             |
+| `GET`  | `/all-users`            | Get all users (with pagination)   | Super Admin, Admin |
+| `GET`  | `/me`                   | Get current user profile          | Authenticated      |
+| `GET`  | `/apply-for-agent`      | Apply to become an agent          | User               |
+| `PUT`  | `/update-profile`       | Update user profile               | Authenticated      |
+| `POST` | `/manage-agent/:userId` | Approve/reject agent applications | Super Admin, Admin |
 
 ### Wallet Management Routes (`/api/v1/wallet`)
 
-| Method | Endpoint         | Description                       | Access             |
-| ------ | ---------------- | --------------------------------- | ------------------ |
-| `GET`  | `/my-wallet`     | Get current user's wallet details | Authenticated      |
-| `GET`  | `/all-wallets`   | Get all wallets                   | Super Admin, Admin |
-| `PUT`  | `/update-limits` | Update wallet transaction limits  | Super Admin, Admin |
-| `GET`  | `/:walletNumber` | Get wallet by wallet number       | Authenticated      |
+| Method  | Endpoint                | Description                       | Access             |
+| ------- | ----------------------- | --------------------------------- | ------------------ |
+| `GET`   | `/my-wallet`            | Get current user's wallet details | Authenticated      |
+| `PATCH` | `/:walletId/change-pin` | Change wallet PIN                 | Authenticated      |
+| `POST`  | `/:walletId/verify-pin` | Verify wallet PIN                 | Authenticated      |
+| `GET`   | `/:walletId/stats`      | Get wallet statistics             | Authenticated      |
+| `GET`   | `/:walletNumber`        | Get wallet by wallet number       | Authenticated      |
+| `GET`   | `/all-wallets`          | Get all wallets                   | Super Admin, Admin |
+| `PUT`   | `/update-limits`        | Update wallet transaction limits  | Super Admin, Admin |
+| `PATCH` | `/:walletId/status`     | Update wallet status              | Super Admin, Admin |
+| `PATCH` | `/:walletId/limits`     | Get wallet transaction limits     | Super Admin, Admin |
 
 ### Transaction Routes (`/api/v1/transaction`)
 
@@ -137,7 +141,6 @@ The Digital Wallet API is a robust financial management system that enables user
 | Method | Endpoint           | Description                    | Access        |
 | ------ | ------------------ | ------------------------------ | ------------- |
 | `POST` | `/transfer`        | Transfer money to another user | User          |
-| `POST` | `/withdrawal`      | Request withdrawal from wallet | User          |
 | `POST` | `/cash-out`        | Request cash-out through agent | User          |
 | `GET`  | `/my-transactions` | Get user's transaction history | Authenticated |
 
@@ -149,12 +152,12 @@ The Digital Wallet API is a robust financial management system that enables user
 
 #### Admin Transactions
 
-| Method | Endpoint            | Description                  | Access             |
-| ------ | ------------------- | ---------------------------- | ------------------ |
-| `GET`  | `/all-transactions` | Get all system transactions  | Super Admin, Admin |
-| `POST` | `/deposit`          | Deposit money to user wallet | Super Admin, Admin |
-| `POST` | `/refund`           | Process transaction refund   | Super Admin, Admin |
-| `GET`  | `/:transactionId`   | Get transaction by ID        | Authenticated      |
+| Method | Endpoint                 | Description                  | Access             |
+| ------ | ------------------------ | ---------------------------- | ------------------ |
+| `GET`  | `/all-transactions`      | Get all system transactions  | Super Admin, Admin |
+| `POST` | `/deposit`               | Deposit money to user wallet | Super Admin, Admin |
+| `POST` | `/:transactionId/refund` | Process transaction refund   | Super Admin, Admin |
+| `GET`  | `/:transactionId`        | Get transaction by ID        | Authenticated      |
 
 ## Request/Response Examples
 
@@ -205,6 +208,20 @@ Response:
 }
 ```
 
+#### User Logout
+
+```json
+POST /api/v1/auth/logout
+
+Response:
+{
+  "statusCode": 200,
+  "success": true,
+  "message": "Logged out successfully!",
+  "data": null
+}
+```
+
 #### Reset Password
 
 ```json
@@ -221,6 +238,17 @@ Response:
   "message": "Password reset successfully!",
   "data": null
 }
+```
+
+#### Google OAuth Login
+
+```json
+GET /api/v1/auth/google
+// Redirects to Google OAuth consent screen
+
+GET /api/v1/auth/google/callback
+// Google OAuth callback with authorization code
+// Redirects to frontend with authentication cookies set
 ```
 
 ### User Management Examples
@@ -278,6 +306,31 @@ Response:
 }
 ```
 
+#### Get My Profile
+
+```json
+GET /api/v1/user/me
+
+Response:
+{
+  "statusCode": 200,
+  "success": true,
+  "message": "User retrieved successfully!",
+  "data": {
+    "_id": "64f5a1b2c3d4e5f6a7b8c9d0",
+    "name": "John Doe",
+    "email": "john@example.com",
+    "phone": "+8801234567890",
+    "role": "USER",
+    "wallet": {
+      "_id": "64f5a1b2c3d4e5f6a7b8c9d1",
+      "walletNumber": "WALLET1234567890",
+      "balance": 1500.00
+    }
+  }
+}
+```
+
 #### Apply for Agent
 
 ```json
@@ -298,10 +351,35 @@ Response:
 }
 ```
 
-#### Approve Agent
+#### Update Profile
 
 ```json
-POST /api/v1/user/approve-agent/64f5a1b2c3d4e5f6a7b8c9d0
+PUT /api/v1/user/update-profile
+{
+  "name": "John Smith",
+  "phone": "+8801234567891",
+  "address": "456 New St, Dhaka"
+}
+
+Response:
+{
+  "statusCode": 200,
+  "success": true,
+  "message": "User updated successfully!",
+  "data": {
+    "_id": "64f5a1b2c3d4e5f6a7b8c9d0",
+    "name": "John Smith",
+    "email": "john@example.com",
+    "phone": "+8801234567891",
+    "address": "456 New St, Dhaka"
+  }
+}
+```
+
+#### Manage Agent
+
+```json
+POST /api/v1/user/manage-agent/64f5a1b2c3d4e5f6a7b8c9d0
 {
   "status": "APPROVED"
 }
@@ -346,6 +424,66 @@ Response:
 }
 ```
 
+#### Change Wallet PIN
+
+```json
+PATCH /api/v1/wallet/64f5a1b2c3d4e5f6a7b8c9d1/change-pin
+{
+  "oldPin": "1234",
+  "newPin": "5678"
+}
+
+Response:
+{
+  "statusCode": 200,
+  "success": true,
+  "message": "PIN changed successfully!",
+  "data": {
+    "_id": "64f5a1b2c3d4e5f6a7b8c9d1",
+    "walletNumber": "WALLET1234567890"
+  }
+}
+```
+
+#### Verify Wallet PIN
+
+```json
+POST /api/v1/wallet/64f5a1b2c3d4e5f6a7b8c9d1/verify-pin
+{
+  "pin": "1234"
+}
+
+Response:
+{
+  "statusCode": 200,
+  "success": true,
+  "message": "PIN verified successfully!",
+  "data": {
+    "verified": true
+  }
+}
+```
+
+#### Get Wallet Statistics
+
+```json
+GET /api/v1/wallet/64f5a1b2c3d4e5f6a7b8c9d1/stats
+
+Response:
+{
+  "statusCode": 200,
+  "success": true,
+  "message": "Wallet stats retrieved successfully!",
+  "data": {
+    "totalTransactions": 25,
+    "totalSent": 5000.00,
+    "totalReceived": 6500.00,
+    "monthlySpent": 1200.00,
+    "dailySpent": 300.00
+  }
+}
+```
+
 #### Get Wallet by Number
 
 ```json
@@ -364,6 +502,96 @@ Response:
       "name": "John Doe",
       "email": "john@example.com"
     }
+  }
+}
+```
+
+#### Get All Wallets (Admin)
+
+```json
+GET /api/v1/wallet/all-wallets?page=1&limit=10
+
+Response:
+{
+  "statusCode": 200,
+  "success": true,
+  "message": "Wallets retrieved successfully!",
+  "data": [
+    {
+      "_id": "64f5a1b2c3d4e5f6a7b8c9d1",
+      "walletNumber": "WALLET1234567890",
+      "balance": 1500.00,
+      "status": "ACTIVE",
+      "user": {
+        "name": "John Doe",
+        "email": "john@example.com"
+      }
+    }
+  ],
+  "meta": {
+    "total": 1
+  }
+}
+```
+
+#### Update Wallet Limits (Admin)
+
+```json
+PUT /api/v1/wallet/update-limits
+{
+  "walletId": "64f5a1b2c3d4e5f6a7b8c9d1",
+  "dailyLimit": 75000,
+  "monthlyLimit": 750000
+}
+
+Response:
+{
+  "statusCode": 200,
+  "success": true,
+  "message": "Wallet limits updated successfully!",
+  "data": {
+    "_id": "64f5a1b2c3d4e5f6a7b8c9d1",
+    "dailyLimit": 75000,
+    "monthlyLimit": 750000
+  }
+}
+```
+
+#### Update Wallet Status (Admin)
+
+```json
+PATCH /api/v1/wallet/64f5a1b2c3d4e5f6a7b8c9d1/status
+{
+  "status": "SUSPENDED"
+}
+
+Response:
+{
+  "statusCode": 200,
+  "success": true,
+  "message": "Wallet status updated successfully!",
+  "data": {
+    "_id": "64f5a1b2c3d4e5f6a7b8c9d1",
+    "status": "SUSPENDED"
+  }
+}
+```
+
+#### Get Wallet Limits (Admin)
+
+```json
+PATCH /api/v1/wallet/64f5a1b2c3d4e5f6a7b8c9d1/limits
+
+Response:
+{
+  "statusCode": 200,
+  "success": true,
+  "message": "Wallet limits retrieved successfully!",
+  "data": {
+    "dailyLimit": 50000,
+    "monthlyLimit": 500000,
+    "dailySpent": 1200.00,
+    "monthlySpent": 15000.00
   }
 }
 ```
@@ -405,34 +633,6 @@ Response:
 }
 ```
 
-#### Cash-In (Agent)
-
-```json
-POST /api/v1/transaction/cash-in
-{
-  "userWalletNumber": "WALLET1234567890",
-  "amount": 1000,
-  "pin": "1234",
-  "reference": "Cash deposit"
-}
-
-Response:
-{
-  "statusCode": 201,
-  "success": true,
-  "message": "Cash-in completed successfully!",
-  "data": {
-    "_id": "64f5a1b2c3d4e5f6a7b8c9d3",
-    "transactionId": "TXN1234567891",
-    "type": "CASH_IN",
-    "amount": 1000,
-    "fee": 10,
-    "commission": 5,
-    "status": "COMPLETED"
-  }
-}
-```
-
 #### Cash-Out Request
 
 ```json
@@ -448,7 +648,7 @@ Response:
 {
   "statusCode": 201,
   "success": true,
-  "message": "Cash-out request created successfully!",
+  "message": "Cash-out completed successfully!",
   "data": {
     "_id": "64f5a1b2c3d4e5f6a7b8c9d4",
     "transactionId": "TXN1234567892",
@@ -460,29 +660,91 @@ Response:
 }
 ```
 
-#### Withdrawal Request
+#### Get My Transactions
 
 ```json
-POST /api/v1/transaction/withdrawal
+GET /api/v1/transaction/my-transactions?page=1&limit=10&type=TRANSFER
+
+Response:
 {
-  "amount": 1200,
+  "statusCode": 200,
+  "success": true,
+  "message": "Transactions retrieved successfully!",
+  "data": [
+    {
+      "_id": "64f5a1b2c3d4e5f6a7b8c9d2",
+      "transactionId": "TXN1234567890",
+      "type": "TRANSFER",
+      "amount": 500,
+      "fee": 5,
+      "status": "COMPLETED",
+      "createdAt": "2023-09-04T10:30:00.000Z"
+    }
+  ],
+  "meta": {
+    "total": 1
+  }
+}
+```
+
+#### Cash-In (Agent)
+
+```json
+POST /api/v1/transaction/cash-in
+{
+  "userWalletNumber": "WALLET1234567890",
+  "amount": 1000,
   "pin": "1234",
-  "bankAccount": "1234567890",
-  "bankName": "ABC Bank"
+  "reference": "Cash deposit"
 }
 
 Response:
 {
   "statusCode": 201,
   "success": true,
-  "message": "Withdrawal request created successfully!",
+  "message": "Cash in completed successfully!",
   "data": {
-    "_id": "64f5a1b2c3d4e5f6a7b8c9d5",
-    "transactionId": "TXN1234567893",
-    "type": "WITHDRAWAL",
-    "amount": 1200,
-    "fee": 12,
-    "status": "PENDING"
+    "_id": "64f5a1b2c3d4e5f6a7b8c9d3",
+    "transactionId": "TXN1234567891",
+    "type": "CASH_IN",
+    "amount": 1000,
+    "fee": 10,
+    "commission": 5,
+    "status": "COMPLETED"
+  }
+}
+```
+
+#### Get All Transactions (Admin)
+
+```json
+GET /api/v1/transaction/all-transactions?page=1&limit=10&type=TRANSFER
+
+Response:
+{
+  "statusCode": 200,
+  "success": true,
+  "message": "Transactions retrieved successfully!",
+  "data": [
+    {
+      "_id": "64f5a1b2c3d4e5f6a7b8c9d2",
+      "transactionId": "TXN1234567890",
+      "type": "TRANSFER",
+      "amount": 500,
+      "fee": 5,
+      "status": "COMPLETED",
+      "sender": {
+        "walletNumber": "WALLET1234567890",
+        "user": "John Doe"
+      },
+      "receiver": {
+        "walletNumber": "WALLET0987654321",
+        "user": "Jane Smith"
+      }
+    }
+  ],
+  "meta": {
+    "total": 1
   }
 }
 ```
@@ -512,39 +774,11 @@ Response:
 }
 ```
 
-#### Get Transaction History
-
-```json
-GET /api/v1/transaction/my-transactions?page=1&limit=10&type=TRANSFER
-
-Response:
-{
-  "statusCode": 200,
-  "success": true,
-  "message": "Transactions retrieved successfully!",
-  "data": [
-    {
-      "_id": "64f5a1b2c3d4e5f6a7b8c9d2",
-      "transactionId": "TXN1234567890",
-      "type": "TRANSFER",
-      "amount": 500,
-      "fee": 5,
-      "status": "COMPLETED",
-      "createdAt": "2023-09-04T10:30:00.000Z"
-    }
-  ],
-  "meta": {
-    "total": 1
-  }
-}
-```
-
 #### Transaction Refund (Admin)
 
 ```json
-POST /api/v1/transaction/refund
+POST /api/v1/transaction/64f5a1b2c3d4e5f6a7b8c9d2/refund
 {
-  "transactionId": "TXN1234567890",
   "reason": "Customer complaint resolved"
 }
 
@@ -560,6 +794,34 @@ Response:
     "amount": 500,
     "status": "COMPLETED",
     "originalTransaction": "TXN1234567890"
+  }
+}
+```
+
+#### Get Transaction by ID
+
+```json
+GET /api/v1/transaction/64f5a1b2c3d4e5f6a7b8c9d2
+
+Response:
+{
+  "statusCode": 200,
+  "success": true,
+  "message": "Transaction retrieved successfully!",
+  "data": {
+    "_id": "64f5a1b2c3d4e5f6a7b8c9d2",
+    "transactionId": "TXN1234567890",
+    "type": "TRANSFER",
+    "amount": 500,
+    "fee": 5,
+    "status": "COMPLETED",
+    "sender": {
+      "walletNumber": "WALLET1234567890"
+    },
+    "receiver": {
+      "walletNumber": "WALLET0987654321"
+    },
+    "createdAt": "2023-09-04T10:30:00.000Z"
   }
 }
 ```

@@ -214,7 +214,7 @@ const approveAgent = async (
   const user = await User.findByIdAndUpdate(
     userId,
     {
-      role: Role.AGENT,
+      role: payload.status === AGENT_STATUS.APPROVED ? Role.AGENT : Role.USER,
       agent: {
         ...payload,
       },
