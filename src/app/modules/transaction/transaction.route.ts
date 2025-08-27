@@ -9,6 +9,7 @@ import {
   depositZodSchema,
   refundZodSchema,
   transferZodSchema,
+  withdrawalZodSchema,
 } from "./transaction.validation";
 
 const router = Router();
@@ -19,6 +20,13 @@ router.post(
   checkAuth(Role.USER),
   validateRequest(transferZodSchema),
   TransactionController.transfer
+);
+
+router.post(
+  "/withdrawal",
+  checkAuth(Role.USER),
+  validateRequest(withdrawalZodSchema),
+  TransactionController.withdrawal
 );
 
 router.post(
@@ -37,7 +45,7 @@ router.get(
 // Agent transaction routes
 router.post(
   "/cash-in",
-  checkAuth(Role.AGENT),
+  checkAuth(Role.AGENT, Role.SUPER_ADMIN, Role.ADMIN),
   validateRequest(cashInZodSchema),
   TransactionController.cashIn
 );
@@ -54,6 +62,12 @@ router.post(
   checkAuth(Role.SUPER_ADMIN, Role.ADMIN),
   validateRequest(depositZodSchema),
   TransactionController.deposit
+);
+
+router.get(
+  "/agent-transaction-overview",
+  checkAuth(Role.AGENT),
+  TransactionController.getAgentTransactionOverview
 );
 
 router.get(

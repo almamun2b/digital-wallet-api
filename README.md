@@ -146,9 +146,10 @@ The Digital Wallet API is a robust financial management system that enables user
 
 #### Agent Transactions
 
-| Method | Endpoint   | Description               | Access |
-| ------ | ---------- | ------------------------- | ------ |
-| `POST` | `/cash-in` | Process cash-in for users | Agent  |
+| Method | Endpoint                      | Description                      | Access |
+| ------ | ----------------------------- | -------------------------------- | ------ |
+| `POST` | `/cash-in`                    | Process cash-in for users        | Agent  |
+| `GET`  | `/agent-transaction-overview` | Get agent transaction statistics | Agent  |
 
 #### Admin Transactions
 
@@ -825,6 +826,46 @@ Response:
   }
 }
 ```
+
+#### Agent Transaction Overview
+
+```json
+GET /api/v1/transaction/agent-transaction-overview
+
+Response:
+{
+  "statusCode": 200,
+  "success": true,
+  "message": "Agent transaction overview retrieved successfully!",
+  "data": {
+    "cashIn": {
+      "totalCount": 15,
+      "totalAmount": 7500
+    },
+    "cashOut": {
+      "totalCount": 8,
+      "totalAmount": 3200
+    },
+    "totalCommission": 214,
+    "commissionRate": 0.5
+  }
+}
+```
+
+**Response Fields:**
+
+- `cashIn.totalCount`: Total number of completed cash-in transactions
+- `cashIn.totalAmount`: Total amount of all completed cash-in transactions
+- `cashOut.totalCount`: Total number of completed cash-out transactions
+- `cashOut.totalAmount`: Total amount of all completed cash-out transactions
+- `totalCommission`: Total commission earned from both transaction types
+- `commissionRate`: Commission rate (0.5 = 50% of transaction fees)
+
+**Commission Calculation:**
+
+- Cash-in/Cash-out fee: 2% of transaction amount
+- Agent commission: 50% of the transaction fee
+- Example: $1000 cash-in → $20 fee → $10 commission to agent
 
 ### Error Response Format
 

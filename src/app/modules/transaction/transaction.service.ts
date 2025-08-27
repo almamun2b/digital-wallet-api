@@ -4,9 +4,13 @@ import mongoose from "mongoose";
 import { AppError } from "../../helpers/appError";
 import { QueryBuilder } from "../../utils/QueryBuilder";
 import { User } from "../user/user.model";
-import { Status } from "../wallet/wallet.interface";
+import { IWallet, Status } from "../wallet/wallet.interface";
 import { Wallet } from "../wallet/wallet.model";
-import { transactionSearchableFields } from "./transaction.constants";
+import {
+  CASH_IN_OUT_FEE_RATE,
+  COMMISSION_RATE,
+  transactionSearchableFields,
+} from "./transaction.constants";
 import { TransactionStatus, TransactionType } from "./transaction.interface";
 import { Transaction } from "./transaction.model";
 
@@ -112,25 +116,22 @@ const checkMonthlyLimit = async (walletId: string, amount: number) => {
 
 const calculateFee = (amount: number, type: TransactionType): number => {
   switch (type) {
-    case TransactionType.TRANSFER:
-      return amount > 1000 ? amount * 0.005 : 0; // 0.5% for transfers > 1000
+    case TransactionType.CASH_IN:
     case TransactionType.CASH_OUT:
-      return amount * 0.015; // 1.5% for cash out
-    case TransactionType.WITHDRAWAL:
-      return amount > 5000 ? 10 : 0; // ৳10 for withdrawals > 5000
+      return amount * CASH_IN_OUT_FEE_RATE; // 2% fee for cash-in and cash-out
     default:
-      return 0;
+      return 0; // No fees for other transactions
   }
 };
 
 const calculateCommission = (fee: number): number => {
-  return fee * 0.1; // 10% of fee as commission
+  return fee * COMMISSION_RATE; // 50% of fee as commission
 };
 
 const transfer = async (
   payload: {
     senderWalletId: string;
-    receiverWalletNumber: string;
+    receiverWalletId: string;
     amount: number;
     pin: string;
     reference?: string;
@@ -154,9 +155,7 @@ const transfer = async (
     }
 
     // Find receiver wallet
-    const receiverWallet = await Wallet.findOne({
-      walletNumber: payload.receiverWalletNumber,
-    }).session(session);
+    const receiverWallet = await validateWallet(payload.receiverWalletId);
 
     if (!receiverWallet) {
       throw new AppError(httpStatus.NOT_FOUND, "Receiver wallet not found");
@@ -177,9 +176,9 @@ const transfer = async (
       );
     }
 
-    // Calculate fee and total amount
-    const fee = calculateFee(payload.amount, TransactionType.TRANSFER);
-    const totalAmount = payload.amount + fee;
+    // No fees for transfers
+    const fee = 0;
+    const totalAmount = payload.amount;
 
     // Check balance
     if (senderWallet.balance < totalAmount) {
@@ -197,6 +196,13 @@ const transfer = async (
     const receiver = await User.findOne({ wallet: receiverWallet._id }).session(
       session
     );
+
+    if (!sender || !receiver) {
+      throw new AppError(
+        httpStatus.NOT_FOUND,
+        "Associated user accounts not found"
+      );
+    }
 
     // Create transaction
     const transaction = new Transaction({
@@ -244,7 +250,7 @@ const transfer = async (
 const cashIn = async (
   payload: {
     agentWalletId: string;
-    customerWalletNumber: string;
+    customerWalletId: string;
     amount: number;
     pin: string;
     reference?: string;
@@ -266,10 +272,12 @@ const cashIn = async (
       throw new AppError(httpStatus.BAD_REQUEST, "Invalid PIN");
     }
 
-    // Find customer wallet
-    const customerWallet = await Wallet.findOne({
-      walletNumber: payload.customerWalletNumber,
-    }).session(session);
+    // // Find customer wallet
+    // const customerWallet = await Wallet.findOne({
+    //   walletNumber: payload.customerWalletNumber,
+    // }).session(session);
+
+    const customerWallet = await validateWallet(payload.customerWalletId);
 
     if (!customerWallet) {
       throw new AppError(httpStatus.NOT_FOUND, "Customer wallet not found");
@@ -282,8 +290,13 @@ const cashIn = async (
       );
     }
 
-    // Check agent balance
-    if (agentWallet.balance < payload.amount) {
+    // Calculate fee and commission for cash-in
+    const fee = calculateFee(payload.amount, TransactionType.CASH_IN);
+    const commission = calculateCommission(fee);
+    const totalAmountNeeded = payload.amount + fee;
+
+    // Check agent balance (agent needs amount + fee)
+    if (agentWallet.balance < totalAmountNeeded) {
       throw new AppError(httpStatus.BAD_REQUEST, "Insufficient agent balance");
     }
 
@@ -295,7 +308,12 @@ const cashIn = async (
       session
     );
 
-    const commission = calculateCommission(payload.amount * 0.005); // 0.5% commission
+    if (!agent || !customer) {
+      throw new AppError(
+        httpStatus.NOT_FOUND,
+        "Associated user accounts not found"
+      );
+    }
 
     // Create transaction
     const transaction = new Transaction({
@@ -308,6 +326,7 @@ const cashIn = async (
       agent: agent!._id,
       agentWallet: agentWallet._id,
       amount: payload.amount,
+      fee,
       commission,
       status: TransactionStatus.PENDING,
       reference: payload.reference,
@@ -316,9 +335,10 @@ const cashIn = async (
     });
 
     // Update balances
-    agentWallet.balance -= payload.amount;
-    agentWallet.balance += commission; // Agent gets commission
-    customerWallet.balance += payload.amount;
+    // Agent pays amount + fee, but gets commission back
+    agentWallet.balance -= payload.amount + fee;
+    agentWallet.balance += commission; // Agent gets commission (50% of fee)
+    customerWallet.balance += payload.amount; // Customer receives the full amount
     customerWallet.totalReceived += payload.amount;
 
     transaction.senderBalanceAfter = agentWallet.balance;
@@ -344,7 +364,7 @@ const cashIn = async (
 const cashOut = async (
   payload: {
     customerWalletId: string;
-    agentWalletNumber: string;
+    agentWalletId: string;
     amount: number;
     pin: string;
     reference?: string;
@@ -367,9 +387,11 @@ const cashOut = async (
     }
 
     // Find agent wallet
-    const agentWallet = await Wallet.findOne({
-      walletNumber: payload.agentWalletNumber,
-    }).session(session);
+    // const agentWallet = await Wallet.findOne({
+    //   walletNumber: payload.agentWalletNumber,
+    // }).session(session);
+
+    const agentWallet = await validateWallet(payload.agentWalletId);
 
     if (!agentWallet) {
       throw new AppError(httpStatus.NOT_FOUND, "Agent wallet not found");
@@ -382,7 +404,7 @@ const cashOut = async (
       );
     }
 
-    // Calculate fee and total amount
+    // Calculate fee and commission for cash-out
     const fee = calculateFee(payload.amount, TransactionType.CASH_OUT);
     const commission = calculateCommission(fee);
     const totalAmount = payload.amount + fee;
@@ -403,6 +425,13 @@ const cashOut = async (
     const agent = await User.findOne({ wallet: agentWallet._id }).session(
       session
     );
+
+    if (!customer || !agent) {
+      throw new AppError(
+        httpStatus.NOT_FOUND,
+        "Associated user accounts not found"
+      );
+    }
 
     // Create transaction
     const transaction = new Transaction({
@@ -545,10 +574,10 @@ const withdrawal = async (
       );
     }
 
-    // Calculate fee and total amount
-    const fee = calculateFee(payload.amount, TransactionType.WITHDRAWAL);
-    const commission = calculateCommission(fee);
-    const totalAmount = payload.amount + fee;
+    // No fees for withdrawals
+    const fee = 0;
+    const commission = 0;
+    const totalAmount = payload.amount;
 
     // Check customer balance
     if (customerWallet.balance < totalAmount) {
@@ -596,7 +625,7 @@ const withdrawal = async (
     customerWallet.balance -= totalAmount;
     customerWallet.totalWithdrawn += payload.amount;
     agentWallet.balance -= payload.amount;
-    agentWallet.balance += commission; // Agent gets commission
+    // No commission for withdrawals
 
     transaction.senderBalanceAfter = customerWallet.balance;
     transaction.receiverBalanceAfter = agentWallet.balance;
@@ -781,6 +810,68 @@ const refundTransaction = async (transactionId: string, reason?: string) => {
   }
 };
 
+const getAgentTransactionOverview = async (decodedToken: JwtPayload) => {
+  const agent = await User.findById(decodedToken.userId).populate<{
+    wallet: IWallet & Document;
+  }>("wallet");
+
+  if (!agent || !agent.wallet) {
+    throw new AppError(httpStatus.NOT_FOUND, "Agent not found");
+  }
+
+  // Get cash-in and cash-out transaction statistics
+  const transactionStats = await Transaction.aggregate([
+    {
+      $match: {
+        agent: agent._id,
+        status: TransactionStatus.COMPLETED,
+        type: { $in: [TransactionType.CASH_IN, TransactionType.CASH_OUT] },
+      },
+    },
+    {
+      $group: {
+        _id: "$type",
+        totalCount: { $sum: 1 },
+        totalAmount: { $sum: "$amount" },
+        totalCommission: { $sum: "$commission" },
+      },
+    },
+  ]);
+
+  // Initialize default values
+  let cashInCount = 0;
+  let cashOutCount = 0;
+  let cashInAmount = 0;
+  let cashOutAmount = 0;
+  let totalCommission = 0;
+
+  // Process aggregation results
+  transactionStats.forEach((stat) => {
+    if (stat._id === TransactionType.CASH_IN) {
+      cashInCount = stat.totalCount;
+      cashInAmount = stat.totalAmount;
+      totalCommission += stat.totalCommission;
+    } else if (stat._id === TransactionType.CASH_OUT) {
+      cashOutCount = stat.totalCount;
+      cashOutAmount = stat.totalAmount;
+      totalCommission += stat.totalCommission;
+    }
+  });
+
+  return {
+    cashIn: {
+      totalCount: cashInCount,
+      totalAmount: cashInAmount,
+    },
+    cashOut: {
+      totalCount: cashOutCount,
+      totalAmount: cashOutAmount,
+    },
+    totalCommission,
+    commissionRate: COMMISSION_RATE, // 50% of fee as commission
+  };
+};
+
 export const TransactionService = {
   transfer,
   cashIn,
@@ -791,4 +882,5 @@ export const TransactionService = {
   getMyTransactions,
   getTransactionById,
   refundTransaction,
+  getAgentTransactionOverview,
 };

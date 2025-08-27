@@ -11,7 +11,7 @@ const checkAuth =
   (...authRoles: string[]) =>
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const assessToken = req.headers.authorization;
+      const assessToken = req.headers.authorization || req.cookies.accessToken;
       if (!assessToken) {
         throw new AppError(403, "No token provided");
       }
@@ -42,7 +42,7 @@ const checkAuth =
       }
 
       if (authRoles.length > 0 && !authRoles.includes(verifiedToken.role)) {
-        throw new AppError(403, "You are not permited to view this route");
+        throw new AppError(403, "You are not permitted to view this route");
       }
       req.user = verifiedToken;
       next();

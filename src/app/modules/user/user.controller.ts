@@ -53,6 +53,23 @@ const getAllUser = catchAsync(
   }
 );
 
+const getAllAgents = catchAsync(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const query = req.query;
+    const result = await userServices.getAllAgents(
+      query as Record<string, string>
+    );
+
+    sendResponse(res, {
+      statusCode: httpStatus.OK,
+      success: true,
+      message: "Agents retrieved successfully!",
+      data: result.data,
+      meta: result.meta,
+    });
+  }
+);
+
 const getMyProfile = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
     const decodedToken = req.user as JwtPayload;
@@ -106,4 +123,5 @@ export const UserController = {
   getMyProfile,
   applyForAgent,
   approveAgent,
+  getAllAgents,
 };

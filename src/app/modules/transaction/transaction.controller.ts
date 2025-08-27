@@ -153,6 +153,22 @@ const refundTransaction = catchAsync(
   }
 );
 
+const getAgentTransactionOverview = catchAsync(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const decodedToken = req.user as JwtPayload;
+    const result = await TransactionService.getAgentTransactionOverview(
+      decodedToken
+    );
+
+    sendResponse(res, {
+      statusCode: httpStatus.OK,
+      success: true,
+      message: "Agent transaction overview retrieved successfully!",
+      data: result,
+    });
+  }
+);
+
 export const TransactionController = {
   transfer,
   cashIn,
@@ -163,4 +179,5 @@ export const TransactionController = {
   getMyTransactions,
   getTransactionById,
   refundTransaction,
+  getAgentTransactionOverview,
 };

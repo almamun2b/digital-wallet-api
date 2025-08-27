@@ -18,15 +18,20 @@ router.post(
 );
 router.get(
   "/all-users",
-  checkAuth(Role.SUPER_ADMIN, Role.ADMIN),
+  checkAuth(...Object.values(Role)),
   UserController.getAllUser
+);
+router.get(
+  "/all-agents",
+  checkAuth(Role.SUPER_ADMIN, Role.ADMIN),
+  UserController.getAllAgents
 );
 router.get(
   "/me",
   checkAuth(...Object.values(Role)),
   UserController.getMyProfile
 );
-router.get(
+router.post(
   "/apply-for-agent",
   checkAuth(Role.USER),
   UserController.applyForAgent

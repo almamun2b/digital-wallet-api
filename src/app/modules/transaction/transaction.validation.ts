@@ -4,8 +4,8 @@ export const transferZodSchema = z.object({
   senderWalletId: z.string({
     required_error: "Sender wallet ID is required",
   }),
-  receiverWalletNumber: z.string({
-    required_error: "Receiver wallet number is required",
+  receiverWalletId: z.string({
+    required_error: "Receiver wallet ID is required",
   }),
   amount: z
     .number({ required_error: "Amount is required" })
@@ -25,7 +25,7 @@ export const transferZodSchema = z.object({
 
 export const cashInZodSchema = z.object({
   agentWalletId: z.string({ required_error: "Agent wallet ID is required" }),
-  customerWalletNumber: z.string({
+  customerWalletId: z.string({
     required_error: "Customer wallet number is required",
   }),
   amount: z
@@ -44,7 +44,7 @@ export const cashOutZodSchema = z.object({
   customerWalletId: z.string({
     required_error: "Customer wallet ID is required",
   }),
-  agentWalletNumber: z.string({
+  agentWalletId: z.string({
     required_error: "Agent wallet number is required",
   }),
   amount: z

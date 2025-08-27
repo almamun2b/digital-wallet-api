@@ -66,7 +66,15 @@ const createUser = async (payload: Partial<IUser>) => {
 
     const updatedUser = await User.findByIdAndUpdate(
       user._id,
-      { wallet: wallet._id },
+      {
+        wallet: wallet._id,
+        agent: {
+          status:
+            payload.role === Role.AGENT
+              ? AGENT_STATUS.PENDING
+              : AGENT_STATUS.NONE,
+        },
+      },
       { session, new: true }
     ).lean();
 
@@ -175,6 +183,27 @@ const getAllUser = async (query: Record<string, string>) => {
   };
 };
 
+const getAllAgents = async (query: Record<string, string>) => {
+  const queryBuilder = new QueryBuilder(User.find({ role: Role.AGENT }), query);
+
+  const tours = queryBuilder
+    .search(userSearchableFields)
+    .filter()
+    .sort()
+    .fields()
+    .paginate();
+
+  const [data, meta] = await Promise.all([
+    tours.build(),
+    queryBuilder.getMeta(),
+  ]);
+
+  return {
+    data,
+    meta,
+  };
+};
+
 const getMyProfile = async (userId: string) => {
   const user = await User.findById(userId);
 
@@ -238,4 +267,5 @@ export const userServices = {
   getMyProfile,
   applyForAgent,
   approveAgent,
+  getAllAgents,
 };
