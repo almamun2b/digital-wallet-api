@@ -116,6 +116,22 @@ const approveAgent = catchAsync(
   }
 );
 
+const blockUnblockUser = catchAsync(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const { userId } = req.params;
+    const payload = req.body;
+
+    const user = await userServices.blockUnblockUser(userId, payload);
+
+    sendResponse(res, {
+      statusCode: httpStatus.OK,
+      success: true,
+      message: "User status updated successfully!",
+      data: user,
+    });
+  }
+);
+
 export const UserController = {
   createUser,
   getAllUser,
@@ -124,4 +140,5 @@ export const UserController = {
   applyForAgent,
   approveAgent,
   getAllAgents,
+  blockUnblockUser,
 };

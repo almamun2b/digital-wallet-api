@@ -48,5 +48,11 @@ router.patch(
   checkAuth(...Object.values(Role)),
   UserController.updateUser
 );
+router.patch(
+  "/block-unblock/:userId",
+  validateRequest(updateUserZodSchema),
+  checkAuth(Role.SUPER_ADMIN, Role.ADMIN),
+  UserController.blockUnblockUser
+);
 
 export const UserRoute = router;

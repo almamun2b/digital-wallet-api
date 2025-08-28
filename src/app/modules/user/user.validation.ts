@@ -81,4 +81,16 @@ const manageAgentZodSchema = z.object({
   status: z.enum(Object.values(AGENT_STATUS) as [string]),
 });
 
-export { createUserZodScheme, manageAgentZodSchema, updateUserZodSchema };
+const blockUnblockUserZodSchema = z.object({
+  isActive: z.enum(Object.values(IsActive) as [string], {
+    required_error: "isActive status is required",
+    invalid_type_error: "isActive must be a valid status",
+  }),
+});
+
+export {
+  blockUnblockUserZodSchema,
+  createUserZodScheme,
+  manageAgentZodSchema,
+  updateUserZodSchema,
+};

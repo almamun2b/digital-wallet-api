@@ -266,6 +266,34 @@ const approveAgent = async (
   return restUser;
 };
 
+const blockUnblockUser = async (
+  userId: string,
+  payload: { isActive: string }
+) => {
+  const user = await User.findById(userId);
+
+  if (!user) {
+    throw new AppError(httpStatus.NOT_FOUND, "User not found");
+  }
+
+  const updatedUser = await User.findByIdAndUpdate(
+    userId,
+    { isActive: payload.isActive },
+    { new: true, runValidators: true }
+  );
+
+  if (!updatedUser) {
+    throw new AppError(
+      httpStatus.INTERNAL_SERVER_ERROR,
+      "Failed to update user status"
+    );
+  }
+
+  const { password: _password, ...restUser } = updatedUser.toObject();
+
+  return restUser;
+};
+
 export const userServices = {
   createUser,
   getAllUser,
@@ -274,4 +302,5 @@ export const userServices = {
   applyForAgent,
   approveAgent,
   getAllAgents,
+  blockUnblockUser,
 };
