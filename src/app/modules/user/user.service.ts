@@ -6,6 +6,7 @@ import { env } from "../../config/env";
 import { AppError } from "../../helpers/appError";
 import { QueryBuilder } from "../../utils/QueryBuilder";
 import { Wallet } from "../wallet/wallet.model";
+import { WalletService } from "../wallet/wallet.service";
 import { userSearchableFields } from "./user.constants";
 import { AGENT_STATUS, IAuthProvider, IUser, Role } from "./user.interface";
 import { User } from "./user.model";
@@ -53,12 +54,17 @@ const createUser = async (payload: Partial<IUser>) => {
       { session }
     );
 
+    // Get system settings for default limits
+    const systemSettings = await WalletService.getSystemSettings();
+
     const [wallet] = await Wallet.create(
       [
         {
           walletNumber,
           user: user._id,
           pin: await bcrypt.hash("1234", Number(env.BCRYPT_SALT_ROUNDS)),
+          dailyLimit: systemSettings.defaultDailyLimit,
+          monthlyLimit: systemSettings.defaultMonthlyLimit,
         },
       ],
       { session }

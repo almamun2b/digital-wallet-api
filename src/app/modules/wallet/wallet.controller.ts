@@ -137,6 +137,25 @@ const getWalletStats = catchAsync(
   }
 );
 
+const adjustFeesCommissionLimits = catchAsync(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const decodedToken = req.user as JwtPayload;
+    const payload = req.body;
+
+    const result = await WalletService.adjustFeesCommissionLimits(
+      decodedToken,
+      payload
+    );
+
+    sendResponse(res, {
+      statusCode: httpStatus.OK,
+      success: true,
+      message: "Fees and commission limits adjusted successfully!",
+      data: result,
+    });
+  }
+);
+
 export const WalletController = {
   getMyWallet,
   getAllWallets,
@@ -146,4 +165,5 @@ export const WalletController = {
   updateWalletStatus,
   updateLimits,
   getWalletStats,
+  adjustFeesCommissionLimits,
 };

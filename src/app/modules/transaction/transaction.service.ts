@@ -3,14 +3,12 @@ import { JwtPayload } from "jsonwebtoken";
 import mongoose from "mongoose";
 import { AppError } from "../../helpers/appError";
 import { QueryBuilder } from "../../utils/QueryBuilder";
+import { Role } from "../user/user.interface";
 import { User } from "../user/user.model";
 import { IWallet, Status } from "../wallet/wallet.interface";
 import { Wallet } from "../wallet/wallet.model";
-import {
-  CASH_IN_OUT_FEE_RATE,
-  COMMISSION_RATE,
-  transactionSearchableFields,
-} from "./transaction.constants";
+import { WalletService } from "../wallet/wallet.service";
+import { transactionSearchableFields } from "./transaction.constants";
 import { TransactionStatus, TransactionType } from "./transaction.interface";
 import { Transaction } from "./transaction.model";
 
@@ -114,18 +112,27 @@ const checkMonthlyLimit = async (walletId: string, amount: number) => {
   }
 };
 
-const calculateFee = (amount: number, type: TransactionType): number => {
+const calculateFee = async (
+  amount: number,
+  type: TransactionType
+): Promise<number> => {
+  const systemSettings = await WalletService.getSystemSettings();
+
   switch (type) {
     case TransactionType.CASH_IN:
+      return amount * systemSettings.cashInFeeRate;
     case TransactionType.CASH_OUT:
-      return amount * CASH_IN_OUT_FEE_RATE; // 2% fee for cash-in and cash-out
+      return amount * systemSettings.cashOutFeeRate;
+    case TransactionType.TRANSFER:
+      return systemSettings.sendMoneyFee; // Fixed 5 BDT fee for transfers
     default:
       return 0; // No fees for other transactions
   }
 };
 
-const calculateCommission = (fee: number): number => {
-  return fee * COMMISSION_RATE; // 50% of fee as commission
+const calculateCommission = async (fee: number): Promise<number> => {
+  const systemSettings = await WalletService.getSystemSettings();
+  return fee * systemSettings.commissionRate;
 };
 
 const transfer = async (
@@ -176,16 +183,16 @@ const transfer = async (
       );
     }
 
-    // No fees for transfers
-    const fee = 0;
-    const totalAmount = payload.amount;
+    // Apply send money fee for transfers
+    const fee = await calculateFee(payload.amount, TransactionType.TRANSFER);
+    const totalAmount = payload.amount + fee;
 
     // Check balance
     if (senderWallet.balance < totalAmount) {
       throw new AppError(httpStatus.BAD_REQUEST, "Insufficient balance");
     }
 
-    // Check limits
+    // Check limits (including fee)
     await checkDailyLimit(payload.senderWalletId, totalAmount);
     await checkMonthlyLimit(payload.senderWalletId, totalAmount);
 
@@ -222,9 +229,9 @@ const transfer = async (
     });
 
     // Update balances
-    senderWallet.balance -= totalAmount;
+    senderWallet.balance -= totalAmount; // Deduct amount + fee from sender
     senderWallet.totalSent += payload.amount;
-    receiverWallet.balance += payload.amount;
+    receiverWallet.balance += payload.amount; // Receiver gets only the amount (not the fee)
     receiverWallet.totalReceived += payload.amount;
 
     transaction.senderBalanceAfter = senderWallet.balance;
@@ -291,8 +298,8 @@ const cashIn = async (
     }
 
     // Calculate fee and commission for cash-in
-    const fee = calculateFee(payload.amount, TransactionType.CASH_IN);
-    const commission = calculateCommission(fee);
+    const fee = await calculateFee(payload.amount, TransactionType.CASH_IN);
+    const commission = await calculateCommission(fee);
     const totalAmountNeeded = payload.amount + fee;
 
     // Check agent balance (agent needs amount + fee)
@@ -405,8 +412,8 @@ const cashOut = async (
     }
 
     // Calculate fee and commission for cash-out
-    const fee = calculateFee(payload.amount, TransactionType.CASH_OUT);
-    const commission = calculateCommission(fee);
+    const fee = await calculateFee(payload.amount, TransactionType.CASH_OUT);
+    const commission = await calculateCommission(fee);
     const totalAmount = payload.amount + fee;
 
     // Check customer balance
@@ -868,7 +875,79 @@ const getAgentTransactionOverview = async (decodedToken: JwtPayload) => {
       totalAmount: cashOutAmount,
     },
     totalCommission,
-    commissionRate: COMMISSION_RATE, // 50% of fee as commission
+    commissionRate: (await WalletService.getSystemSettings()).commissionRate,
+  };
+};
+
+const getAdminTransactionOverview = async (decodedToken: JwtPayload) => {
+  const admin = await User.findById(decodedToken.userId);
+
+  if (!admin) {
+    throw new AppError(httpStatus.NOT_FOUND, "Admin not found");
+  }
+
+  // Get total transaction count and volume (all transaction types)
+  const totalTransactionStats = await Transaction.aggregate([
+    {
+      $match: {
+        status: TransactionStatus.COMPLETED,
+      },
+    },
+    {
+      $group: {
+        _id: null,
+        totalTransactionCount: { $sum: 1 },
+        totalTransactionVolume: { $sum: "$amount" },
+      },
+    },
+  ]);
+
+  // Get user statistics by role
+  const userStats = await User.aggregate([
+    {
+      $match: {
+        isDeleted: { $ne: true },
+      },
+    },
+    {
+      $group: {
+        _id: "$role",
+        count: { $sum: 1 },
+      },
+    },
+  ]);
+
+  // Process user statistics
+  let totalUsers = 0;
+  let totalAgents = 0;
+  let totalAdmins = 0;
+  let totalSuperAdmins = 0;
+
+  userStats.forEach((stat) => {
+    if (stat._id === Role.USER) {
+      totalUsers = stat.count;
+    } else if (stat._id === Role.AGENT) {
+      totalAgents = stat.count;
+    } else if (stat._id === Role.ADMIN) {
+      totalAdmins = stat.count;
+    } else if (stat._id === Role.SUPER_ADMIN) {
+      totalSuperAdmins = stat.count;
+    }
+  });
+
+  // Get total transaction data
+  const totalData = totalTransactionStats[0] || {
+    totalTransactionCount: 0,
+    totalTransactionVolume: 0,
+  };
+
+  return {
+    totalUsers,
+    totalAgents,
+    totalAdmins,
+    totalSuperAdmins,
+    totalTransactionCount: totalData.totalTransactionCount,
+    totalTransactionVolume: totalData.totalTransactionVolume,
   };
 };
 
@@ -883,4 +962,5 @@ export const TransactionService = {
   getTransactionById,
   refundTransaction,
   getAgentTransactionOverview,
+  getAdminTransactionOverview,
 };

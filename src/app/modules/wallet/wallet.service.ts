@@ -6,8 +6,14 @@ import { env } from "../../config/env";
 import { AppError } from "../../helpers/appError";
 import { QueryBuilder } from "../../utils/QueryBuilder";
 import { User } from "../user/user.model";
+import { SystemSettings } from "./systemSettings.model";
 import { walletSearchableFields } from "./wallet.constants";
-import { IWallet, Status } from "./wallet.interface";
+import {
+  IAdjustFeesCommissionLimitsPayload,
+  ISystemSettings,
+  IWallet,
+  Status,
+} from "./wallet.interface";
 import { Wallet } from "./wallet.model";
 
 const getMyWallet = async (decodedToken: JwtPayload) => {
@@ -219,6 +225,105 @@ const getWalletStats = async (walletId: string) => {
   };
 };
 
+const adjustFeesCommissionLimits = async (
+  decodedToken: JwtPayload,
+  payload: IAdjustFeesCommissionLimitsPayload
+) => {
+  const admin = await User.findById(decodedToken.userId);
+
+  if (!admin) {
+    throw new AppError(httpStatus.NOT_FOUND, "Admin not found");
+  }
+
+  // Get or create system settings
+  let systemSettings = await SystemSettings.findOne();
+
+  if (!systemSettings) {
+    // Create initial system settings if none exist
+    systemSettings = await SystemSettings.create({
+      cashInFeeRate: 0.02, // 2%
+      cashOutFeeRate: 0.02, // 2%
+      commissionRate: 0.5, // 50%
+      sendMoneyFee: 5, // 5 BDT fixed fee
+      defaultDailyLimit: 50000,
+      defaultMonthlyLimit: 500000,
+      lastUpdatedBy: admin._id,
+    });
+  } else {
+    // Update existing settings with provided values
+    const updateData: Partial<ISystemSettings> = {
+      lastUpdatedBy: admin._id,
+    };
+
+    if (payload.cashInFeeRate !== undefined) {
+      updateData.cashInFeeRate = payload.cashInFeeRate;
+    }
+    if (payload.cashOutFeeRate !== undefined) {
+      updateData.cashOutFeeRate = payload.cashOutFeeRate;
+    }
+    if (payload.commissionRate !== undefined) {
+      updateData.commissionRate = payload.commissionRate;
+    }
+    if (payload.sendMoneyFee !== undefined) {
+      updateData.sendMoneyFee = payload.sendMoneyFee;
+    }
+    if (payload.dailyLimit !== undefined) {
+      updateData.defaultDailyLimit = payload.dailyLimit;
+    }
+    if (payload.monthlyLimit !== undefined) {
+      updateData.defaultMonthlyLimit = payload.monthlyLimit;
+    }
+
+    systemSettings = await SystemSettings.findOneAndUpdate({}, updateData, {
+      new: true,
+      runValidators: true,
+    });
+  }
+
+  // If daily or monthly limits are being updated, update all existing wallets
+  if (payload.dailyLimit !== undefined || payload.monthlyLimit !== undefined) {
+    const walletUpdateData: Partial<IWallet> = {};
+
+    if (payload.dailyLimit !== undefined) {
+      walletUpdateData.dailyLimit = payload.dailyLimit;
+    }
+    if (payload.monthlyLimit !== undefined) {
+      walletUpdateData.monthlyLimit = payload.monthlyLimit;
+    }
+
+    await Wallet.updateMany({}, walletUpdateData);
+  }
+
+  return {
+    systemSettings,
+    message: "System settings updated successfully",
+    updatedBy: {
+      id: admin._id,
+      name: admin.name,
+      email: admin.email,
+    },
+  };
+};
+
+const getSystemSettings = async () => {
+  let systemSettings = await SystemSettings.findOne();
+
+  if (!systemSettings) {
+    // Create default system settings if none exist
+    systemSettings = await SystemSettings.create({
+      cashInFeeRate: 0.02, // 2%
+      cashOutFeeRate: 0.02, // 2%
+      commissionRate: 0.5, // 50%
+      sendMoneyFee: 5, // 5 BDT fixed fee
+      defaultDailyLimit: 50000,
+      defaultMonthlyLimit: 500000,
+      lastUpdatedBy: null, // Will be set when first admin updates
+    });
+  }
+
+  return systemSettings;
+};
+
 export const WalletService = {
   getMyWallet,
   getAllWallets,
@@ -228,4 +333,6 @@ export const WalletService = {
   verifyPin,
   updateLimits,
   getWalletStats,
+  adjustFeesCommissionLimits,
+  getSystemSettings,
 };

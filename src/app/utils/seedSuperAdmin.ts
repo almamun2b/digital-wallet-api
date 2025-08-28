@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 import { env } from "../config/env";
 import { IAuthProvider, Role } from "../modules/user/user.interface";
 import { User } from "../modules/user/user.model";
+import { SystemSettings } from "../modules/wallet/systemSettings.model";
 import { Wallet } from "../modules/wallet/wallet.model";
 
 const seedSuperAdmin = async () => {
@@ -49,13 +50,15 @@ const seedSuperAdmin = async () => {
       Math.random() * 1000
     )}`;
 
-    // Create wallet with super admin reference
+    // Create wallet with super admin reference (using default limits since system settings will be created after)
     const [wallet] = await Wallet.create(
       [
         {
           walletNumber,
           user: superAdmin._id,
           pin: await bcrypt.hash("1234", Number(env.BCRYPT_SALT_ROUNDS)),
+          dailyLimit: 50000, // Default values that will match system settings
+          monthlyLimit: 500000,
         },
       ],
       { session }
@@ -67,6 +70,26 @@ const seedSuperAdmin = async () => {
       { wallet: wallet._id },
       { session }
     );
+
+    // Initialize system settings if they don't exist
+    const existingSettings = await SystemSettings.findOne().session(session);
+    if (!existingSettings) {
+      await SystemSettings.create(
+        [
+          {
+            cashInFeeRate: 0.02, // 2%
+            cashOutFeeRate: 0.02, // 2%
+            commissionRate: 0.5, // 50%
+            sendMoneyFee: 5, // 5 BDT fixed fee
+            defaultDailyLimit: 50000,
+            defaultMonthlyLimit: 500000,
+            lastUpdatedBy: superAdmin._id,
+          },
+        ],
+        { session }
+      );
+      console.log("System settings initialized");
+    }
 
     await session.commitTransaction();
   } catch (error) {

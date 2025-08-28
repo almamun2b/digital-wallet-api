@@ -69,6 +69,11 @@ router.get(
   checkAuth(Role.AGENT),
   TransactionController.getAgentTransactionOverview
 );
+router.get(
+  "/admin-transaction-overview",
+  checkAuth(Role.ADMIN, Role.SUPER_ADMIN),
+  TransactionController.getAdminTransactionOverview
+);
 
 router.get(
   "/:transactionId",

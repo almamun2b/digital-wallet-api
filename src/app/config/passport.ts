@@ -11,6 +11,7 @@ import { AppError } from "../helpers/appError";
 import { Role } from "../modules/user/user.interface";
 import { User } from "../modules/user/user.model";
 import { Wallet } from "../modules/wallet/wallet.model";
+import { WalletService } from "../modules/wallet/wallet.service";
 import { env } from "./env";
 
 passport.use(
@@ -88,9 +89,14 @@ passport.use(
             Math.random() * 1000
           )}`;
 
+          // Get system settings for default limits
+          const systemSettings = await WalletService.getSystemSettings();
+
           const wallet = await Wallet.create({
             walletNumber,
             pin: await bcrypt.hash("1234", Number(env.BCRYPT_SALT_ROUNDS)), // Default PIN
+            dailyLimit: systemSettings.defaultDailyLimit,
+            monthlyLimit: systemSettings.defaultMonthlyLimit,
           });
 
           if (!wallet) {

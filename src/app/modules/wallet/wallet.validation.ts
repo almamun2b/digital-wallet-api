@@ -35,3 +35,33 @@ export const updateLimitsZodSchema = z.object({
     .min(0, "Monthly limit cannot be negative")
     .optional(),
 });
+
+export const adjustFeesCommissionLimitsZodSchema = z.object({
+  cashInFeeRate: z
+    .number({ invalid_type_error: "Cash-in fee rate must be a number" })
+    .min(0, "Cash-in fee rate cannot be negative")
+    .max(1, "Cash-in fee rate cannot exceed 100%")
+    .optional(),
+  cashOutFeeRate: z
+    .number({ invalid_type_error: "Cash-out fee rate must be a number" })
+    .min(0, "Cash-out fee rate cannot be negative")
+    .max(1, "Cash-out fee rate cannot exceed 100%")
+    .optional(),
+  commissionRate: z
+    .number({ invalid_type_error: "Commission rate must be a number" })
+    .min(0, "Commission rate cannot be negative")
+    .max(1, "Commission rate cannot exceed 100%")
+    .optional(),
+  sendMoneyFee: z
+    .number({ invalid_type_error: "Send money fee must be a number" })
+    .min(0, "Send money fee cannot be negative")
+    .optional(),
+  dailyLimit: z
+    .number({ invalid_type_error: "Daily limit must be a number" })
+    .min(0, "Daily limit cannot be negative")
+    .optional(),
+  monthlyLimit: z
+    .number({ invalid_type_error: "Monthly limit must be a number" })
+    .min(0, "Monthly limit cannot be negative")
+    .optional(),
+});

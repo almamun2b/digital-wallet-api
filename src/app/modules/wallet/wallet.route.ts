@@ -4,6 +4,7 @@ import { validateRequest } from "../../middlewares/validateRequest";
 import { Role } from "../user/user.interface";
 import { WalletController } from "./wallet.controller";
 import {
+  adjustFeesCommissionLimitsZodSchema,
   changePinZodSchema,
   updateLimitsZodSchema,
   updateStatusZodSchema,
@@ -64,6 +65,13 @@ router.patch(
   checkAuth(Role.SUPER_ADMIN, Role.ADMIN),
   validateRequest(updateLimitsZodSchema),
   WalletController.updateLimits
+);
+
+router.patch(
+  "/adjust-fees-commission-limits",
+  checkAuth(Role.SUPER_ADMIN, Role.ADMIN),
+  validateRequest(adjustFeesCommissionLimitsZodSchema),
+  WalletController.adjustFeesCommissionLimits
 );
 
 export const WalletRoutes = router;
