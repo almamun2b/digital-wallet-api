@@ -24,6 +24,7 @@ app.use(
   cors({
     origin: env.FRONTEND_URL,
     credentials: true,
+    allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
 app.use(express.json());
