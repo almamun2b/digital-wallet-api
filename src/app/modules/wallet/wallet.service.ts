@@ -324,6 +324,16 @@ const getSystemSettings = async () => {
   return systemSettings;
 };
 
+const getFeesCommissionLimits = async () => {
+  const systemSettings = await SystemSettings.findOne();
+
+  if (!systemSettings) {
+    throw new AppError(httpStatus.NOT_FOUND, "System settings not found");
+  }
+
+  return systemSettings;
+};
+
 export const WalletService = {
   getMyWallet,
   getAllWallets,
@@ -335,4 +345,5 @@ export const WalletService = {
   getWalletStats,
   adjustFeesCommissionLimits,
   getSystemSettings,
+  getFeesCommissionLimits,
 };

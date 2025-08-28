@@ -48,6 +48,19 @@ router.get(
 );
 
 router.get(
+  "/fees-commission-limits",
+  checkAuth(Role.SUPER_ADMIN, Role.ADMIN),
+  WalletController.getFeesCommissionLimits
+);
+
+router.patch(
+  "/adjust-fees-commission-limits",
+  checkAuth(Role.SUPER_ADMIN, Role.ADMIN),
+  validateRequest(adjustFeesCommissionLimitsZodSchema),
+  WalletController.adjustFeesCommissionLimits
+);
+
+router.get(
   "/:walletNumber",
   checkAuth(Role.SUPER_ADMIN, Role.ADMIN, Role.AGENT),
   WalletController.getWalletByNumber
@@ -65,13 +78,6 @@ router.patch(
   checkAuth(Role.SUPER_ADMIN, Role.ADMIN),
   validateRequest(updateLimitsZodSchema),
   WalletController.updateLimits
-);
-
-router.patch(
-  "/adjust-fees-commission-limits",
-  checkAuth(Role.SUPER_ADMIN, Role.ADMIN),
-  validateRequest(adjustFeesCommissionLimitsZodSchema),
-  WalletController.adjustFeesCommissionLimits
 );
 
 export const WalletRoutes = router;

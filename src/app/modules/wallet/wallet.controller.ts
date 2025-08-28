@@ -156,6 +156,19 @@ const adjustFeesCommissionLimits = catchAsync(
   }
 );
 
+const getFeesCommissionLimits = catchAsync(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const systemSettings = await WalletService.getFeesCommissionLimits();
+
+    sendResponse(res, {
+      statusCode: httpStatus.OK,
+      success: true,
+      message: "System settings retrieved successfully!",
+      data: systemSettings,
+    });
+  }
+);
+
 export const WalletController = {
   getMyWallet,
   getAllWallets,
@@ -166,4 +179,5 @@ export const WalletController = {
   updateLimits,
   getWalletStats,
   adjustFeesCommissionLimits,
+  getFeesCommissionLimits,
 };
