@@ -67,13 +67,15 @@ const logout = catchAsync(
     res.clearCookie("accessToken", {
       httpOnly: true,
       secure: true,
-      sameSite: "lax",
+      sameSite: "none",
+      maxAge: 86400000,
     });
 
     res.clearCookie("refreshToken", {
       httpOnly: true,
       secure: true,
-      sameSite: "lax",
+      sameSite: "none",
+      maxAge: 86400000,
     });
 
     sendResponse(res, {
