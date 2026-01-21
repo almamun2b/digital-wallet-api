@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-non-null-assertion */
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import bcrypt from "bcryptjs";
 import httpStatus from "http-status-codes";
 import { JwtPayload } from "jsonwebtoken";
