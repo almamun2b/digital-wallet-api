@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import bcrypt from "bcryptjs";
 import httpStatus from "http-status-codes";
 import passport from "passport";
