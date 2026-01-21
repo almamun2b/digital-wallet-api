@@ -22,7 +22,7 @@ app.use(passport.initialize());
 app.use(passport.session());
 app.use(
   cors({
-    origin: env.FRONTEND_URL,
+    origin: env.FRONTEND_URL.split(","),
     credentials: true,
     allowedHeaders: ["Content-Type", "Authorization"],
   })
