@@ -16,7 +16,7 @@ app.use(
     secret: env.EXPRESS_SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
-  })
+  }),
 );
 app.use(passport.initialize());
 app.use(passport.session());
@@ -25,14 +25,14 @@ app.use(
     origin: env.FRONTEND_URL.split(","),
     credentials: true,
     allowedHeaders: ["Content-Type", "Authorization"],
-  })
+  }),
 );
 app.use(express.json());
 app.use(cookieParser());
 
 app.use("/api/v1", router);
 
-app.get("/", async (req: Request, res: Response) => {
+app.get("/", async (_req: Request, res: Response) => {
   res.send({
     success: true,
     message: "Welcome to the Digital Wallet API!",
