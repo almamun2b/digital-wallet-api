@@ -22,17 +22,18 @@ app.use(passport.initialize());
 app.use(passport.session());
 app.use(
   cors({
-    origin: (origin, callback) => {
-      const allowedOrigins = env.FRONTEND_URL.split(",").map((url) =>
-        url.trim(),
-      );
+    origin: true,
+    // origin: (origin, callback) => {
+    //   const allowedOrigins = env.FRONTEND_URL.split(",").map((url) =>
+    //     url.trim(),
+    //   );
 
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error("Not allowed by CORS"));
-      }
-    },
+    //   if (!origin || allowedOrigins.includes(origin)) {
+    //     callback(null, true);
+    //   } else {
+    //     callback(new Error("Not allowed by CORS"));
+    //   }
+    // },
     credentials: true,
     allowedHeaders: ["Content-Type", "Authorization"],
     exposedHeaders: ["Set-Cookie"],
