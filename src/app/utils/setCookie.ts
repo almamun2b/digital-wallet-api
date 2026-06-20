@@ -15,7 +15,8 @@ const setAuthCookie = (res: Response, tokenInfo: AuthTokens) => {
       httpOnly: true,
       secure: true,
       sameSite: "none",
-      maxAge: 86400000,
+      maxAge: 1 * 24 * 60 * 60 * 1000,
+      path: "/",
     });
   }
 
@@ -24,7 +25,8 @@ const setAuthCookie = (res: Response, tokenInfo: AuthTokens) => {
       httpOnly: true,
       secure: true,
       sameSite: "none",
-      maxAge: 2592000000,
+      maxAge: 30 * 24 * 60 * 60 * 1000,
+      path: "/",
     });
   }
 };
