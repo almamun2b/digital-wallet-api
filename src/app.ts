@@ -22,9 +22,20 @@ app.use(passport.initialize());
 app.use(passport.session());
 app.use(
   cors({
-    origin: env.FRONTEND_URL.split(","),
+    origin: (origin, callback) => {
+      const allowedOrigins = env.FRONTEND_URL.split(",").map((url) =>
+        url.trim(),
+      );
+
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
     credentials: true,
     allowedHeaders: ["Content-Type", "Authorization"],
+    exposedHeaders: ["Set-Cookie"],
   }),
 );
 app.use(express.json());
