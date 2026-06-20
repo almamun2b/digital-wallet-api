@@ -11,9 +11,13 @@ const checkAuth =
   (...authRoles: string[]) =>
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const assessToken = req.headers.authorization || req.cookies.accessToken;
+      let assessToken = req.headers.authorization || req.cookies.accessToken;
       if (!assessToken) {
         throw new AppError(403, "No token provided");
+      }
+
+      if (assessToken.startsWith("Bearer ")) {
+        assessToken = assessToken.substring(7).trim();
       }
 
       const verifiedToken = verifyToken(

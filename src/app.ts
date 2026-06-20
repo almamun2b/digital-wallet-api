@@ -35,7 +35,7 @@ app.use(
     //   }
     // },
     credentials: true,
-    allowedHeaders: ["Content-Type", "Authorization"],
+    allowedHeaders: ["Content-Type", "Authorization", "x-refresh-token"],
     exposedHeaders: ["Set-Cookie"],
   }),
 );

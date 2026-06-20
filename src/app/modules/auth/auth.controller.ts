@@ -45,11 +45,19 @@ const credentialsLogin = catchAsync(
 );
 const getNewAccessToken = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    const refreshToken = req.cookies.refreshToken;
+    let refreshToken =
+      req.cookies.refreshToken ||
+      req.body.refreshToken ||
+      req.headers["x-refresh-token"];
+
+    if (Array.isArray(refreshToken)) {
+      refreshToken = refreshToken[0];
+    }
+
     if (!refreshToken) {
       throw new AppError(
         httpStatus.BAD_REQUEST,
-        "Refresh token is missing in cookies"
+        "Refresh token is missing"
       );
     }
     const tokenInfo = await authServices.getNewAccessToken(refreshToken);
